@@ -85,6 +85,8 @@ static void display_ubi_info(struct ubi_device *ubi)
 	ubi_msg("number of PEBs reserved for bad PEB handling: %d",
 			ubi->beb_rsvd_pebs);
 	ubi_msg("max/mean erase counter: %d/%d", ubi->max_ec, ubi->mean_ec);
+        ubi_msg("LEBS per CPEB: %d", ubi->lebs_per_cpeb);
+
 }
 
 static int ubi_info(int layout)
@@ -240,8 +242,8 @@ static int ubi_remove_vol(char *volume)
 	ubi->volumes[vol->vol_id]->eba_tbl = NULL;
 	ubi->volumes[vol->vol_id] = NULL;
 
-	ubi->rsvd_pebs -= reserved_lebs;
-	ubi->avail_pebs += reserved_lebs;
+	ubi->rsvd_pebs -= DIV_ROUND_UP(reserved_lebs, ubi-> lebs_per_cpeb);
+	ubi->avail_pebs += DIV_ROUND_UP(reserved_lebs, ubi-> lebs_per_cpeb);
 	i = ubi->beb_rsvd_level - ubi->beb_rsvd_pebs;
 	if (i > 0) {
 		i = ubi->avail_pebs >= i ? i : ubi->avail_pebs;
@@ -584,7 +586,7 @@ static int do_ubi(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 		}
 		/* Use maximum available size */
 		if (!size) {
-			size = (int64_t)ubi->avail_pebs * ubi->leb_size;
+			size = (int64_t)ubi->avail_pebs * ubi->leb_size * ubi->lebs_per_cpeb;
 			printf("No size specified -> Using max size (%lld)\n", size);
 		}
 		/* E.g., create volume */
